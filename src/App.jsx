@@ -1,19 +1,23 @@
 import { useEffect, useState } from 'react';
 import {
-  getEvents, createEvent, updateEvent, deleteEvent, getSavedUser, logout,
+  getEvents, createEvent, updateEvent, deleteEvent, bookTicket, getSavedUser, logout,
 } from './api';
 import EventCard from './components/EventCard';
 import EventForm from './components/EventForm';
 import AuthForm from './components/AuthForm';
+import MyTickets from './components/MyTickets';
+import VerifyTicket from './components/VerifyTicket';
 
 export default function App() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState(null); // the event being edited, or null
+  const [editing, setEditing] = useState(null);
   const [user, setUser] = useState(getSavedUser());
   const [authOpen, setAuthOpen] = useState(false);
+  const [view, setView] = useState('events'); // events | tickets | verify
+  const [newBookingId, setNewBookingId] = useState(null);
 
   const canManage = Boolean(user) && (user.role === 'organizer' || user.role === 'admin');
 
@@ -49,6 +53,30 @@ export default function App() {
     }
   }
 
+  async function handleBook(event) {
+    if (!user) {
+      setAuthOpen(true);
+      setError('Please log in to book tickets.');
+      return;
+    }
+    const answer = window.prompt('How many tickets? (1 to 5)', '1');
+    if (answer === null) return;
+    const quantity = Number(answer);
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 5) {
+      setError('Please enter a number from 1 to 5.');
+      return;
+    }
+    try {
+      setError('');
+      const booking = await bookTicket(event.id, quantity);
+      setNewBookingId(booking.id);
+      setView('tickets');
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   function openNew() {
     setEditing(null);
     setFormOpen(true);
@@ -71,7 +99,14 @@ export default function App() {
     logout();
     setUser(null);
     closeForm();
+    setView('events');
     setError('');
+  }
+  function backToEvents() {
+    setView('events');
+    setNewBookingId(null);
+    setError('');
+    load();
   }
 
   return (
@@ -82,8 +117,12 @@ export default function App() {
           {user ? (
             <>
               <span className="who">Hello, {user.name} ({user.role})</span>
+              <button className="btn" onClick={() => setView('tickets')}>My tickets</button>
               {canManage && (
-                <button className="btn primary" onClick={openNew}>Add event</button>
+                <>
+                  <button className="btn" onClick={() => setView('verify')}>Verify ticket</button>
+                  <button className="btn primary" onClick={() => { setView('events'); openNew(); }}>Add event</button>
+                </>
               )}
               <button className="btn" onClick={handleLogout}>Logout</button>
             </>
@@ -101,26 +140,37 @@ export default function App() {
         <AuthForm onSuccess={handleAuthSuccess} onCancel={() => setAuthOpen(false)} />
       )}
 
-      {formOpen && canManage && (
-        <EventForm initial={editing} onSave={handleSave} onCancel={closeForm} />
+      {view === 'tickets' && user && (
+        <MyTickets onClose={backToEvents} highlightId={newBookingId} />
       )}
 
-      {loading ? (
-        <p className="notice">Loading events?</p>
-      ) : events.length === 0 && !error ? (
-        <p className="notice">No events yet.{canManage ? ' Select ?Add event? to create the first one.' : ''}</p>
-      ) : (
-        <main className="grid">
-          {events.map((ev) => (
-            <EventCard
-              key={ev.id}
-              event={ev}
-              canManage={canManage}
-              onEdit={openEdit}
-              onDelete={handleDelete}
-            />
-          ))}
-        </main>
+      {view === 'verify' && canManage && <VerifyTicket onClose={backToEvents} />}
+
+      {view === 'events' && (
+        <>
+          {formOpen && canManage && (
+            <EventForm initial={editing} onSave={handleSave} onCancel={closeForm} />
+          )}
+
+          {loading ? (
+            <p className="notice">Loading events...</p>
+          ) : events.length === 0 && !error ? (
+            <p className="notice">No events yet.{canManage ? ' Select "Add event" to create the first one.' : ''}</p>
+          ) : (
+            <main className="grid">
+              {events.map((ev) => (
+                <EventCard
+                  key={ev.id}
+                  event={ev}
+                  canManage={canManage}
+                  onEdit={openEdit}
+                  onDelete={handleDelete}
+                  onBook={handleBook}
+                />
+              ))}
+            </main>
+          )}
+        </>
       )}
     </div>
   );

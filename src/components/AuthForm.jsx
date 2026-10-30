@@ -56,7 +56,7 @@ export default function AuthForm({ onSuccess, onCancel }) {
 
       <div className="actions">
         <button type="submit" className="btn primary" disabled={busy}>
-          {busy ? 'Please wait?' : mode === 'login' ? 'Log in' : 'Sign up'}
+          {busy ? 'Please wait...' : mode === 'login' ? 'Log in' : 'Sign up'}
         </button>
         <button type="button" className="btn" onClick={onCancel}>Cancel</button>
       </div>
@@ -70,3 +70,4 @@ export default function AuthForm({ onSuccess, onCancel }) {
     </form>
   );
 }
+

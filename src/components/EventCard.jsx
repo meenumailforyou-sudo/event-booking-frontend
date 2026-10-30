@@ -1,4 +1,4 @@
-export default function EventCard({ event, canManage, onEdit, onDelete }) {
+export default function EventCard({ event, canManage, onEdit, onDelete, onBook }) {
   const { title, location, date, price, totalSeats, availableSeats } = event;
   const d = new Date(date);
   const valid = !isNaN(d);
@@ -14,20 +14,27 @@ export default function EventCard({ event, canManage, onEdit, onDelete }) {
           <div className="bar"><span style={{ width: `${pct}%` }} /></div>
           <small>{availableSeats} of {totalSeats} seats left</small>
         </div>
-        {canManage && (
-          <div className="actions">
-            <button className="btn" onClick={() => onEdit(event)}>Edit</button>
-            <button className="btn danger" onClick={() => onDelete(event)}>Delete</button>
-          </div>
-        )}
+        <div className="actions">
+          {availableSeats > 0 ? (
+            <button className="btn primary" onClick={() => onBook(event)}>Book ticket</button>
+          ) : (
+            <span className="soldout">Sold out</span>
+          )}
+          {canManage && (
+            <>
+              <button className="btn" onClick={() => onEdit(event)}>Edit</button>
+              <button className="btn danger" onClick={() => onDelete(event)}>Delete</button>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="ticket-stub">
-        <span className="day">{valid ? d.getDate() : '?'}</span>
+        <span className="day">{valid ? d.getDate() : '-'}</span>
         <span className="month">
           {valid ? d.toLocaleString('en-IN', { month: 'short', year: 'numeric' }) : ''}
         </span>
-        <span className="price">{price ? `?${price}` : 'Free'}</span>
+        <span className="price">{price ? `\u20B9${price}` : 'Free'}</span>
       </div>
     </article>
   );

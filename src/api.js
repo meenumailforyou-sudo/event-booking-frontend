@@ -62,3 +62,9 @@ export const createEvent = (event) =>
 export const updateEvent = (id, event) =>
   request(`${BASE}/${id}`, { method: 'PUT', body: JSON.stringify(event) });
 export const deleteEvent = (id) => request(`${BASE}/${id}`, { method: 'DELETE' });
+
+export const bookTicket = (eventId, quantity) =>
+  request('/api/bookings', { method: 'POST', body: JSON.stringify({ eventId, quantity }) });
+export const getMyBookings = () => request('/api/bookings/my');
+export const verifyTicket = (code) =>
+  request('/api/bookings/verify', { method: 'POST', body: JSON.stringify({ code }) });
