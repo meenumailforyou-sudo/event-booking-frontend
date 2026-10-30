@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
-import { getEvents, createEvent, updateEvent, deleteEvent } from './api';
+import {
+  getEvents, createEvent, updateEvent, deleteEvent, getSavedUser, logout,
+} from './api';
 import EventCard from './components/EventCard';
 import EventForm from './components/EventForm';
+import AuthForm from './components/AuthForm';
 
 export default function App() {
   const [events, setEvents] = useState([]);
@@ -9,6 +12,10 @@ export default function App() {
   const [error, setError] = useState('');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null); // the event being edited, or null
+  const [user, setUser] = useState(getSavedUser());
+  const [authOpen, setAuthOpen] = useState(false);
+
+  const canManage = Boolean(user) && (user.role === 'organizer' || user.role === 'admin');
 
   async function load() {
     try {
@@ -55,27 +62,63 @@ export default function App() {
     setEditing(null);
   }
 
+  function handleAuthSuccess(loggedIn) {
+    setUser(loggedIn);
+    setAuthOpen(false);
+    setError('');
+  }
+  function handleLogout() {
+    logout();
+    setUser(null);
+    closeForm();
+    setError('');
+  }
+
   return (
     <div className="page">
       <header className="top">
         <h1>Tickets, on the door</h1>
-        <button className="btn primary" onClick={openNew}>Add event</button>
+        <div className="top-actions">
+          {user ? (
+            <>
+              <span className="who">Hello, {user.name} ({user.role})</span>
+              {canManage && (
+                <button className="btn primary" onClick={openNew}>Add event</button>
+              )}
+              <button className="btn" onClick={handleLogout}>Logout</button>
+            </>
+          ) : (
+            <button className="btn primary" onClick={() => setAuthOpen(true)}>
+              Login / Sign up
+            </button>
+          )}
+        </div>
       </header>
 
       {error && <p className="notice error" role="alert">{error}</p>}
 
-      {formOpen && (
+      {authOpen && !user && (
+        <AuthForm onSuccess={handleAuthSuccess} onCancel={() => setAuthOpen(false)} />
+      )}
+
+      {formOpen && canManage && (
         <EventForm initial={editing} onSave={handleSave} onCancel={closeForm} />
       )}
 
       {loading ? (
-        <p className="notice">Loading events…</p>
+        <p className="notice">Loading events?</p>
       ) : events.length === 0 && !error ? (
-        <p className="notice">No events yet. Select “Add event” to create the first one.</p>
+        <p className="notice">No events yet.{canManage ? ' Select ?Add event? to create the first one.' : ''}</p>
       ) : (
         <main className="grid">
           {events.map((ev) => (
-            <EventCard key={ev.id} event={ev} onEdit={openEdit} onDelete={handleDelete} />
+            <EventCard
+              key={ev.id}
+              event={ev}
+              canManage={canManage}
+              onEdit={openEdit}
+              onDelete={handleDelete}
+            />
           ))}
         </main>
       )}
